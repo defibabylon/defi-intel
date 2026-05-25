@@ -1,0 +1,15 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      xaiApiKey:
+        type: string
+        description: "xAI API key for Grok x_search (get_market_narrative tool). Optional — all other tools work without it."
+    required: []
+  commandFunction: |-
+    (config) => ({
+      command: "python3",
+      args: ["server.py", "--stdio"],
+      env: config.xaiApiKey ? { XAI_API_KEY: config.xaiApiKey } : {}
+    })
