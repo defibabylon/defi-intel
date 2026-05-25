@@ -46,7 +46,7 @@ Or add to Claude Desktop `claude_desktop_config.json`:
   "mcpServers": {
     "defi-intel": {
       "type": "http",
-      "url": "https://defi-intel-mcp.loca.lt/mcp"
+      "url": "https://defi-intel.siteflowops.co.za/mcp"
     }
   }
 }

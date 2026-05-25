@@ -257,7 +257,7 @@ SERVER_CARD = {
     "connections": [
         {
             "type": "http",
-            "url": "https://defi-intel-mcp.loca.lt/mcp",
+            "url": "https://defi-intel.siteflowops.co.za/mcp",
             "configSchema": {}
         }
     ],
