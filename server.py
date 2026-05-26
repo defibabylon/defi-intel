@@ -244,13 +244,85 @@ def get_market_narrative(topic: str) -> str:
     return result
 
 
+@mcp.tool()
+def generate_operator_brief(
+    protocols: list[str] = [],
+    chains: list[str] = [],
+    include_narrative: bool = True,
+) -> str:
+    """Generate a structured DeFi operator brief — one call compiles TVL, yields, stablecoin health,
+    governance actions, market narrative, and RWA risk flags into a single NotebookLM-ready document.
+
+    protocols: protocol slugs to deep-dive (e.g. ['aave', 'liqwid-finance', 'uniswap-v3'])
+    chains: chain filters applied across all sections (e.g. ['Ethereum', 'Cardano'])
+    include_narrative: set False to skip X/Twitter sentiment (faster, no XAI key needed)
+    """
+    import datetime
+    today = datetime.date.today().isoformat()
+    chain_label = ", ".join(chains) if chains else "All chains"
+    parts = [f"# DeFi Operator Brief — {today}\n**Focus:** {chain_label}\n"]
+
+    parts.append("## 1. TVL Snapshot")
+    for chain in (chains or [""]):
+        parts.append(get_top_protocols(limit=10, chain=chain))
+
+    parts.append("\n## 2. Chain TVL Ranking")
+    parts.append(get_chain_tvl_ranking(limit=10))
+
+    if protocols:
+        parts.append("\n## 3. Protocol Deep-Dives")
+        for slug in protocols:
+            parts.append(f"\n### {slug}")
+            parts.append(get_protocol_tvl(slug))
+            parts.append(get_protocol_fees(slug, days=7))
+            rwa = get_rwa_attestation(slug)
+            if "No attestation" not in rwa:
+                parts.append(rwa)
+
+    parts.append("\n## 4. Yield Opportunities")
+    for chain in (chains or [""]):
+        parts.append(get_top_yield_pools(min_apy=5.0, chain=chain, limit=15))
+
+    parts.append("\n## 5. Stablecoin Health")
+    parts.append(get_stablecoin_summary())
+
+    parts.append("\n## 6. Governance Actions")
+    gov_targets = list(set((chains or []) + [p.split("-")[0] for p in protocols])) or [""]
+    for eco in gov_targets:
+        parts.append(get_governance_activity(eco))
+
+    if include_narrative:
+        parts.append("\n## 7. Market Narrative (Live X Signal)")
+        topics = ([f"{c} DeFi" for c in chains] if chains
+                  else [p for p in protocols[:3]] if protocols
+                  else ["DeFi TVL", "stablecoin depeg", "DeFi governance"])
+        for topic in topics[:3]:
+            parts.append(f"\n### {topic}")
+            parts.append(get_market_narrative(topic))
+
+    known_rwa = {"liqwid", "aave", "compound", "maker", "spark", "euler", "radiant", "morpho"}
+    rwa_targets = [p for p in (protocols or list(known_rwa)) if any(k in p.lower() for k in known_rwa)]
+    if rwa_targets:
+        parts.append("\n## 8. RWA Risk Flags")
+        for p in rwa_targets[:5]:
+            r = get_rwa_attestation(p)
+            if "No attestation" not in r:
+                parts.append(r)
+
+    parts.append(
+        f"\n---\n*Brief generated {today} | Sources: DefiLlama, rwa-attest, Grok x_search"
+        " | Paste into NotebookLM or use as daily context*"
+    )
+    return "\n\n".join(parts)
+
+
 SERVER_CARD = {
     "name": "DeFi Intelligence",
     "qualifiedName": "defibabylon/defi-intel",
     "description": (
-        "Operator-grade DeFi intelligence MCP. 10 tools vs DefiLlama's basic 4 — adds governance proposals, "
-        "RWA attestation scores, and live X/Twitter narrative. No enterprise subscription. "
-        "Sources: DefiLlama, rwa-attest, gov-scout, Grok x_search. "
+        "Operator-grade DeFi intelligence MCP. 11 tools vs DefiLlama's basic 4 — adds governance proposals, "
+        "RWA attestation scores, live X/Twitter narrative, and a one-call operator brief for NotebookLM. "
+        "No enterprise subscription. Sources: DefiLlama, rwa-attest, Grok x_search. "
         "Built for DeFi researchers, protocol contributors, and fund analysts."
     ),
     "iconUrl": "",
@@ -271,7 +343,8 @@ SERVER_CARD = {
         {"name": "search_protocols",       "description": "Search DeFi protocols by name or keyword"},
         {"name": "get_rwa_attestation",    "description": "RWA-Attest risk scores for DeFi protocols"},
         {"name": "get_governance_activity","description": "Active governance proposals by ecosystem"},
-        {"name": "get_market_narrative",   "description": "Live X/Twitter sentiment on any DeFi topic"},
+        {"name": "get_market_narrative",      "description": "Live X/Twitter sentiment on any DeFi topic"},
+        {"name": "generate_operator_brief",   "description": "One-call operator brief: TVL + yields + stablecoins + governance + narrative + RWA — NotebookLM-ready"},
     ],
 }
 
@@ -293,6 +366,7 @@ if __name__ == "__main__":
         get_top_protocols, get_protocol_tvl, get_chain_tvl_ranking,
         get_top_yield_pools, get_stablecoin_summary, get_protocol_fees,
         search_protocols, get_rwa_attestation, get_governance_activity, get_market_narrative,
+        generate_operator_brief,
     ]:
         mcp_http.tool()(tool_fn)
 
@@ -303,7 +377,7 @@ if __name__ == "__main__":
         if path == "/.well-known/mcp/server-card.json":
             await JSONResponse(SERVER_CARD)(scope, receive, send)
         elif path == "/health":
-            await JSONResponse({"status": "ok", "tools": 10})(scope, receive, send)
+            await JSONResponse({"status": "ok", "tools": 11})(scope, receive, send)
         else:
             await base_app(scope, receive, send)
 

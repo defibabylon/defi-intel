@@ -1,6 +1,6 @@
 # DeFi Intelligence MCP
 
-Operator-grade DeFi intelligence for Claude. 10 tools covering live TVL, yield pools, stablecoin flows, governance proposals, RWA attestation scores, and X/Twitter market narrative.
+Operator-grade DeFi intelligence for Claude. 11 tools covering live TVL, yield pools, stablecoin flows, governance proposals, RWA attestation scores, X/Twitter market narrative, and a one-call operator brief for NotebookLM.
 
 **Listed on Smithery**: [smithery.ai/servers/defibabylon/defi-intel](https://smithery.ai/servers/defibabylon/defi-intel)
 
@@ -28,6 +28,7 @@ The `get_market_narrative` tool adds live X/Twitter sentiment via Grok — the o
 | `get_rwa_attestation(protocol)` | RWA-Attest risk scores (8 protocols attested) |
 | `get_governance_activity(ecosystem)` | Active governance proposals by ecosystem |
 | `get_market_narrative(topic)` | Live X/Twitter sentiment on any DeFi topic via Grok |
+| `generate_operator_brief(protocols, chains, include_narrative)` | One-call brief: TVL + yields + stablecoins + governance + narrative + RWA. NotebookLM-ready. |
 
 Data sources: [DefiLlama](https://defillama.com), [rwa-attest](https://github.com/defibabylon/rwa-attest), Grok x_search.
 
