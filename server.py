@@ -10,6 +10,7 @@ from mcp.server.fastmcp import FastMCP
 XAI_API_KEY = os.environ.get("XAI_API_KEY", "")
 LLAMA_BASE = "https://api.llama.fi"
 YIELDS_BASE = "https://yields.llama.fi"
+STABLE_BASE = "https://stablecoins.llama.fi"
 
 mcp = FastMCP(
     "DeFi Intelligence",
@@ -26,6 +27,13 @@ def _llama(path: str) -> dict | list:
 
 def _llama_yields(path: str) -> dict | list:
     url = f"{YIELDS_BASE}/{path}"
+    req = urllib.request.Request(url, headers={"User-Agent": "defi-intelligence-mcp/1.0"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.load(r)
+
+
+def _llama_stable(path: str) -> dict | list:
+    url = f"{STABLE_BASE}/{path}"
     req = urllib.request.Request(url, headers={"User-Agent": "defi-intelligence-mcp/1.0"})
     with urllib.request.urlopen(req, timeout=20) as r:
         return json.load(r)
@@ -56,11 +64,12 @@ def get_top_protocols(limit: int = 20, chain: str = "") -> str:
     """Get top DeFi protocols by TVL. Optionally filter by chain (e.g. 'Ethereum', 'Cardano')."""
     try:
         data = _llama("protocols")
+        data = [p for p in data if p.get("category") not in ("CEX", "Chain")]
         if chain:
             data = [p for p in data if chain.lower() in [c.lower() for c in p.get("chains", [])]]
-        data = sorted(data, key=lambda x: x.get("tvl", 0), reverse=True)[:limit]
+        data = sorted(data, key=lambda x: x.get("tvl") or 0, reverse=True)[:limit]
         rows = [
-            f"- {p['name']} ({', '.join(p.get('chains',['?'])[:3])}): ${p.get('tvl',0):,.0f} TVL | {p.get('change_1d',0):+.1f}% 24h"
+            f"- {p['name']} ({', '.join(p.get('chains',['?'])[:3])}): ${p.get('tvl') or 0:,.0f} TVL | {p.get('change_1d') or 0:+.1f}% 24h"
             for p in data
         ]
         return f"Top {limit} DeFi protocols by TVL" + (f" on {chain}" if chain else "") + ":\n" + "\n".join(rows)
@@ -76,14 +85,16 @@ def get_protocol_tvl(protocol_slug: str) -> str:
         name = data.get("name", protocol_slug)
         tvl = data.get("tvl", [])
         current = tvl[-1].get("totalLiquidityUSD", 0) if tvl else 0
+        prev_1d = tvl[-2].get("totalLiquidityUSD", current) if len(tvl) >= 2 else current
+        prev_7d = tvl[-8].get("totalLiquidityUSD", current) if len(tvl) >= 8 else current
+        change_1d = ((current - prev_1d) / prev_1d * 100) if prev_1d else 0
+        change_7d = ((current - prev_7d) / prev_7d * 100) if prev_7d else 0
         chains = list(data.get("currentChainTvls", {}).keys())
-        change_1d = data.get("change_1d", "N/A")
-        change_7d = data.get("change_7d", "N/A")
         category = data.get("category", "Unknown")
         return (
             f"{name} [{category}]\n"
             f"Current TVL: ${current:,.0f}\n"
-            f"Change 24h: {change_1d}% | 7d: {change_7d}%\n"
+            f"Change 24h: {change_1d:+.1f}% | 7d: {change_7d:+.1f}%\n"
             f"Active chains: {', '.join(chains[:8])}"
         )
     except Exception as e:
@@ -125,7 +136,7 @@ def get_top_yield_pools(min_apy: float = 5.0, chain: str = "", limit: int = 20) 
 def get_stablecoin_summary() -> str:
     """Get stablecoin market overview: total market cap, top stablecoins, peg status."""
     try:
-        data = _llama("stablecoins?includePrices=true")
+        data = _llama_stable("stablecoins?includePrices=true")
         coins = data.get("peggedAssets", [])
         coins = sorted(coins, key=lambda x: x.get("circulating", {}).get("peggedUSD", 0), reverse=True)[:10]
         total = sum(c.get("circulating", {}).get("peggedUSD", 0) for c in coins)
@@ -167,11 +178,14 @@ def search_protocols(query: str, limit: int = 10) -> str:
         q = query.lower()
         matches = [
             p for p in data
-            if q in p.get("name", "").lower()
-            or q in p.get("category", "").lower()
-            or any(q in c.lower() for c in p.get("chains", []))
+            if p.get("category") not in ("CEX", "Chain")
+            and (
+                q in p.get("name", "").lower()
+                or q in p.get("category", "").lower()
+                or any(q in c.lower() for c in p.get("chains", []))
+            )
         ]
-        matches = sorted(matches, key=lambda x: x.get("tvl", 0), reverse=True)[:limit]
+        matches = sorted(matches, key=lambda x: x.get("tvl") or 0, reverse=True)[:limit]
         if not matches:
             return f"No protocols found matching '{query}'"
         rows = [
