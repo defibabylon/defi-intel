@@ -99,7 +99,14 @@ WantedBy=multi-user.target
 
 ---
 
+## Background
+
+[What You Build When the Data Doesn't Exist Yet](https://paragraph.com/@0x836c370ab3ca72a823ec7f1a9c148305db3e5812/what-you-build-when-the-data-doesnt-exist-yet) — the Paragraph article behind this tool.
+
+---
+
 ## Related
 
+- [gov-scout](https://github.com/defibabylon/gov-scout) — the governance scraper behind `get_governance_activity`
 - [rwa-attest](https://github.com/defibabylon/rwa-attest) — the attestation scoring engine behind `get_rwa_attestation`
 - [HypeFiltr](https://hypefiltr.substack.com) — weekly DeFi gap intelligence newsletter; this MCP was the first gap actioned
