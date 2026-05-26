@@ -109,4 +109,4 @@ WantedBy=multi-user.target
 
 - [gov-scout](https://github.com/defibabylon/gov-scout) — the governance scraper behind `get_governance_activity`
 - [rwa-attest](https://github.com/defibabylon/rwa-attest) — the attestation scoring engine behind `get_rwa_attestation`
-- [HypeFiltr](https://hypefiltr.substack.com) — weekly DeFi gap intelligence newsletter; this MCP was the first gap actioned
+- [HypeFiltr](https://hypefiltr.substack.com) — weekly market gap intelligence newsletter; this MCP was the first gap actioned
